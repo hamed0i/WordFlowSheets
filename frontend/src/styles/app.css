@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* متغیرهای رنگ پایه برای حالت لایت */
+#sheets-excel-updater-app {
+    --app-bg: #F0F0F0;
+    --app-surface: #ffffff;
+    --app-surface-subtle: #f1f5f9;
+    --app-border: #e2e8f0;
+    --app-text-main: #0f172a;
+    --app-text-muted: #64748b;
+
+    font-family: 'Vazirmatn', ui-sans-serif, system-ui, sans-serif;
+    background-color: var(--app-bg);
+    color: var(--app-text-main);
+    min-height: 100vh;
+}
+
+#sheets-excel-updater-app.dark,
+html.dark #sheets-excel-updater-app {
+    --app-bg: #0b1120;
+    --app-surface: #1e293b;
+    --app-surface-subtle: #0f172a;
+    --app-border: #334155;
+    --app-text-main: #F0F0F0;
+    --app-text-muted: #94a3b8;
+}
+
+#sheets-excel-updater-app .bg-white {
+    background-color: var(--app-surface) !important;
+}
+
+/*#sheets-excel-updater-app .bg-slate-50 {*/
+/*    background-color: var(--app-bg) !important;*/
+/*}*/
+
+#sheets-excel-updater-app .border-slate-200,
+#sheets-excel-updater-app .border-slate-100 {
+    border-color: var(--app-border) !important;
+}
+
+#sheets-excel-updater-app .text-slate-900,
+#sheets-excel-updater-app .text-slate-800 {
+    color: var(--app-text-main) !important;
+}
+
+#sheets-excel-updater-app .text-slate-700,
+#sheets-excel-updater-app .text-slate-600,
+#sheets-excel-updater-app .text-slate-500 {
+    color: var(--app-text-muted) !important;
+}
+
+#sheets-excel-updater-app input,
+#sheets-excel-updater-app select {
+    background-color: var(--app-surface-subtle) !important;
+    border-color: var(--app-border) !important;
+    color: var(--app-text-main) !important;
+}
+
+#sheets-excel-updater-app tr:hover {
+    background-color: var(--app-surface-subtle) !important;
+}
+
+/* جلوگیری از انیمیشن و تأخیر در هنگام تغییر تم */
+#sheets-excel-updater-app * {
+    transition: none !important;
+}
+
+
+/* خنثی‌سازی کامل استایل قالب WoodMart و هسته وردپرس برای فرم‌ها */
+#sheets-excel-updater-app input[type="text"],
+#sheets-excel-updater-app input[type="search"],
+#sheets-excel-updater-app input[type="password"],
+#sheets-excel-updater-app input[type="number"],
+#sheets-excel-updater-app select,
+#sheets-excel-updater-app textarea {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+
+    /* خنثی کردن ردیوس ۲ پیکسلی وودمارت تا کلاس‌های تیلویند مثل rounded-xl کار کنند */
+    border-radius: inherit;
+
+    /* خنثی کردن پدینگ‌ها و ارتفاع‌های تحمیلی قالب */
+    min-height: unset !important;
+    max-height: unset !important;
+    box-shadow: none !important;
+    outline: none !important;
+    line-height: 1.5 !important;
+    vertical-align: middle !important;
+    font-family: inherit !important;
+
+    /* رنگ و حاشیه بر اساس متغیرهای تم */
+    background-color: var(--app-surface-subtle) !important;
+    border-color: var(--app-border) !important;
+    border-width: 1px !important;
+    border-style: solid !important;
+    color: var(--app-text-main) !important;
+}
+
+/* تضمین اعمال گوشه‌های گرد تیلویند روی فیلدها */
+#sheets-excel-updater-app .rounded-xl {
+    border-radius: 0.75rem !important;
+}
+
+#sheets-excel-updater-app .rounded-lg {
+    border-radius: 0.5rem !important;
+}
+
+#sheets-excel-updater-app .rounded-2xl {
+    border-radius: 1rem !important;
+}
+
+/* تضمین اعمال ارتفاع‌های تیلویند */
+#sheets-excel-updater-app .h-11 {
+    height: 2.75rem !important;
+}
+
+#sheets-excel-updater-app .h-10 {
+    height: 2.5rem !important;
+}
+
+/* تضمین پدینگ‌های افقی تیلویند */
+#sheets-excel-updater-app .px-3 {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+}
+
+#sheets-excel-updater-app .px-4 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+}
+
+#sheets-excel-updater-app .pr-10 {
+    padding-right: 2.5rem !important;
+}
+
+#sheets-excel-updater-app .pl-4 {
+    padding-left: 1rem !important;
+}
+
+/* فوکوس نرم تیلویند روی اینپوت‌ها */
+#sheets-excel-updater-app input:focus,
+#sheets-excel-updater-app select:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+}
+
+/* استایل چک‌باکس‌ها */
+#sheets-excel-updater-app input[type="checkbox"] {
+    appearance: checkbox !important;
+    -webkit-appearance: checkbox !important;
+    border-radius: 0.25rem !important;
+    box-shadow: none !important;
+    border-color: var(--app-border) !important;
+}
+
+/* آیتم‌های دراپ‌داون در تم تاریک و روشن */
+#sheets-excel-updater-app select option {
+    background-color: var(--app-surface) !important;
+    color: var(--app-text-main) !important;
+}
+
+/* Use the full WordPress content area, without altering the admin menu. */
+body.toplevel_page_sheets-excel-updater #wpcontent {
+    padding: 0 !important;
+}
+body.toplevel_page_sheets-excel-updater #wpbody-content {
+    padding-bottom: 0;
+    float: none;
+}
+body.toplevel_page_sheets-excel-updater #wpfooter {
+    display: none;
+}
+#sheets-excel-updater-app {
+    width: 100%;
+    min-width: 0;
+    min-height: calc(100vh - 32px);
+}
+#sheets-excel-updater-app .app-page {
+    width: 100%;
+    min-width: 0;
+    min-height: calc(100vh - 32px);
+    margin: 0;
+    padding: 16px;
+}
+@media (max-width: 782px) {
+    #sheets-excel-updater-app,
+    #sheets-excel-updater-app .app-page {
+        min-height: calc(100vh - 46px);
+    }
+}
