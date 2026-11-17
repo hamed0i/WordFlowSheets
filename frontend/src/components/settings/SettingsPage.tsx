@@ -117,15 +117,17 @@ export const SettingsPage = () => {
     };
 // درون کامپوننت SettingsPage:
     const [searchMetaKey, setSearchMetaKey] = useState('');
+    const [worker, setWorker] = useState({useWorker: false, workerUrl: '', workerToken: '', hasWorkerToken: false});
+    const [loadingGeneral, setLoadingGeneral] = useState(true);
+    const [generalError, setGeneralError] = useState(false);
     const [savingMeta, setSavingMeta] = useState(false);
     const [metaMessage, setMetaMessage] = useState<string | null>(null);
 
     useEffect(() => {
         settingsApi.getGeneralSettings().then((res) => {
-            if (res?.data?.searchMetaKey) {
-                setSearchMetaKey(res.data.searchMetaKey);
-            }
-        }).catch(() => {});
+            setSearchMetaKey(res.data.searchMetaKey);
+            setWorker({...res.data.worker, workerToken: ''});
+        }).catch(() => {setGeneralError(true); setMetaMessage('دریافت تنظیمات عمومی ناموفق بود؛ صفحه را بازخوانی کنید.');}).finally(() => setLoadingGeneral(false));
     }, []);
 
     const handleSaveGeneralSettings = async (e: React.FormEvent) => {
@@ -133,10 +135,11 @@ export const SettingsPage = () => {
         setSavingMeta(true);
         setMetaMessage(null);
         try {
-            await settingsApi.updateGeneralSettings(searchMetaKey);
+            const response = await settingsApi.updateGeneralSettings(searchMetaKey, worker);
+            setWorker({...response.data.worker, workerToken: ''});
             setMetaMessage('تنظیمات عمومی با موفقیت ذخیره شد.');
-        } catch {
-            setMetaMessage('خطا در ذخیره تنظیمات عمومی.');
+        } catch (error) {
+            setMetaMessage(error instanceof Error ? error.message : 'خطا در ذخیره تنظیمات عمومی.');
         } finally {
             setSavingMeta(false);
         }
@@ -166,7 +169,7 @@ export const SettingsPage = () => {
                     کلید متادیتا برای جستجوی پیشرفته و نمایش اطلاعات تکمیلی محصول (مانند SKU یا شناسه انبار)
                 </p>
 
-                <form onSubmit={handleSaveGeneralSettings} className="mt-4 flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+                <form onSubmit={handleSaveGeneralSettings} className="mt-4 space-y-5">
                     <div className="w-full sm:max-w-md">
                         <label className="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300">
                             کلید متای جستجو (Meta Key)
@@ -181,12 +184,39 @@ export const SettingsPage = () => {
                         />
                     </div>
 
+                    <fieldset disabled={loadingGeneral || generalError || savingMeta} className="border-t border-slate-200 pt-5">
+                        <label className="flex cursor-pointer items-center gap-3 text-sm font-medium text-slate-700">
+                            <input type="checkbox" checked={worker.useWorker}
+                                onChange={(e) => setWorker({...worker, useWorker: e.target.checked})}
+                                className="size-4 rounded border-slate-300 text-blue-600" />
+                            اتصال همهٔ شیت‌ها از طریق Cloudflare Worker
+                        </label>
+                        <p className="mt-2 text-xs text-slate-500">با فعال‌سازی، دریافت ستون‌ها و اطلاعات همهٔ شیت‌ها از این ورکر انجام می‌شود.</p>
+                        {worker.useWorker && <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                            <div>
+                                <label htmlFor="worker-url" className="mb-2 block text-xs font-medium text-slate-700">آدرس ورکر</label>
+                                <input id="worker-url" type="url" required dir="ltr" value={worker.workerUrl}
+                                    placeholder="https://sheets-proxy.example.workers.dev"
+                                    onChange={(e) => setWorker({...worker, workerUrl: e.target.value})}
+                                    className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-blue-500" />
+                            </div>
+                            <div>
+                                <label htmlFor="worker-token" className="mb-2 block text-xs font-medium text-slate-700">کلید محرمانه ورکر (WORKER_TOKEN)</label>
+                                <input id="worker-token" type="password" dir="ltr" autoComplete="new-password" value={worker.workerToken}
+                                    required={!worker.hasWorkerToken} minLength={32} maxLength={256}
+                                    placeholder={worker.hasWorkerToken ? 'برای حفظ کلید قبلی خالی بگذارید' : 'حداقل ۳۲ کاراکتر؛ علامت‌های ویژه مجازند، بدون فاصله'}
+                                    onChange={(e) => setWorker({...worker, workerToken: e.target.value})}
+                                    className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-blue-500" />
+                            </div>
+                        </div>}
+                    </fieldset>
+
                     <button
                         type="submit"
-                        disabled={savingMeta}
+                        disabled={savingMeta || loadingGeneral || generalError}
                         className="inline-flex h-10 items-center justify-center rounded-xl bg-blue-600 px-5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
                     >
-                        {savingMeta ? 'در حال ذخیره...' : 'ذخیره متا'}
+                        {savingMeta ? 'در حال ذخیره...' : 'ذخیره تنظیمات عمومی'}
                     </button>
 
                     {metaMessage && (

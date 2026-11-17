@@ -189,6 +189,28 @@ final class GoogleSheetsService
 	
 
 	
+    public static function validateConnection(array $credentials): array|WP_Error
+    {
+        $enabled = $credentials['useWorker'] ?? false;
+        if (!is_bool($enabled)) {
+            return new WP_Error('invalid_worker_mode', 'وضعیت اتصال با ورکر معتبر نیست.', ['status' => 400]);
+        }
+        $url = trim((string) ($credentials['workerUrl'] ?? ''));
+        $token = trim((string) ($credentials['workerToken'] ?? ''));
+        if ($enabled) {
+            $parts = wp_parse_url($url);
+            if (!is_array($parts) || ($parts['scheme'] ?? '') !== 'https' || empty($parts['host'])
+                || isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment'])
+                || !wp_http_validate_url($url)) {
+                return new WP_Error('invalid_worker_url', 'آدرس ورکر باید HTTPS و عمومی، بدون پارامتر یا اطلاعات ورود باشد.', ['status' => 400]);
+            }
+            if (!preg_match('/^[\x21-\x7E]{32,256}$/D', $token)) {
+                return new WP_Error('invalid_worker_token', 'کلید ورکر باید ۳۲ تا ۲۵۶ کاراکتر ASCII قابل چاپ، بدون فاصله یا خط جدید باشد؛ علامت‌های ویژه مجازند.', ['status' => 400]);
+            }
+        }
+        return ['useWorker' => $enabled, 'workerUrl' => $url, 'workerToken' => $token];
+    }
+
 	private function request(
 		string $spreadsheetId,
 		string $apiKey,
@@ -233,21 +255,35 @@ final class GoogleSheetsService
 			)
 		);
 		
-		$response = wp_safe_remote_get(
-			$url,
-			[
-				'timeout' => 30,
-				'redirection' => 2,
-			]
-		);
-		
+        $storedConnection = get_option('wordflow_sheets_worker', []);
+        $connection = self::validateConnection(is_array($storedConnection) ? $storedConnection : []);
+        if (is_wp_error($connection)) {
+            return $connection;
+        }
+        $args = ['timeout' => 30, 'redirection' => 0];
+        if ($connection['useWorker']) {
+            $url = $connection['workerUrl'];
+            $args['method'] = 'POST';
+            $args['headers'] = [
+                'Content-Type' => 'application/json',
+                'X-Worker-Token' => $connection['workerToken'],
+            ];
+            $args['body'] = wp_json_encode([
+                'spreadsheetId' => $spreadsheetId,
+                'apiKey' => $apiKey,
+                'sheetName' => $sheetName,
+                'range' => $range,
+            ]);
+        }
+        $response = wp_safe_remote_request($url, $args);
+
 		if (is_wp_error($response)) {
 			return new WP_Error(
 				'google_sheets_request_failed',
-				'ارتباط با Google Sheets برقرار نشد.',
+				$connection['useWorker'] ? 'ارتباط با ورکر برقرار نشد؛ آدرس و دسترسی سرور را بررسی کنید.' : 'ارتباط با Google Sheets برقرار نشد.',
 				[
 					'status' => 502,
-					'error' => $response->get_error_message(),
+					'transport_code' => $response->get_error_code(),
 				]
 			);
 		}
@@ -256,9 +292,36 @@ final class GoogleSheetsService
 		$body = wp_remote_retrieve_body($response);
 		
 		if ($statusCode < 200 || $statusCode >= 300) {
+            $message = 'Google Sheets درخواست را نپذیرفت (HTTP ' . $statusCode . ').';
+            if ($connection['useWorker']) {
+                $errorPayload = json_decode($body, true);
+                $error = is_array($errorPayload) && is_array($errorPayload['error'] ?? null) ? $errorPayload['error'] : [];
+                $code = (string) ($error['code'] ?? '');
+                $legacy = (string) ($error['message'] ?? '');
+                $source = (string) wp_remote_retrieve_header($response, 'x-wordflow-source');
+                $known = [
+                    'worker_token_missing' => 'کلید WORKER_TOKEN در نسخهٔ منتشرشدهٔ همین ورکر تعریف نشده است. Secret را در همان ورکر و محیطی که آدرسش در افزونه است اضافه و Deploy کنید.',
+                    'worker_token_invalid' => 'مقدار WORKER_TOKEN در Cloudflare نامعتبر است؛ طول باید ۳۲ تا ۲۵۶ کاراکتر ASCII قابل چاپ، بدون فاصله یا خط جدید باشد. نسخهٔ جدید کد ورکر را Deploy کنید.',
+                    'worker_token_mismatch' => 'کلید ذخیره‌شده در افزونه با WORKER_TOKEN ورکر یکسان نیست. مقدار اصلی کلید را در هر دو محل وارد کنید.',
+                ];
+                if (isset($known[$code])) {
+                    $message = $known[$code];
+                } elseif ($legacy === 'WORKER_TOKEN is missing or invalid.') {
+                    $message = 'خود ورکر WORKER_TOKEN را تعریف‌نشده یا نامعتبر تشخیص داده است. Secret و نسخهٔ کد را در ورکری که آدرسش در افزونه است بررسی و Deploy کنید.';
+                } elseif ($legacy === 'Unauthorized.') {
+                    $message = $known['worker_token_mismatch'];
+                } elseif ($source === 'google') {
+                    $message = 'ورکر به گوگل متصل شد، اما Google Sheets پاسخ HTTP ' . $statusCode . ' داد. در خطای ۵۰۳ کمی بعد دوباره تلاش کنید.';
+                } elseif (!is_array($errorPayload)) {
+                    $message = 'آدرس ورکر پاسخ غیر JSON با HTTP ' . $statusCode . ' برگرداند؛ علت از این پاسخ مشخص نیست. دسترسی به ورکر و لاگ Cloudflare را بررسی کنید.';
+                } else {
+                    $message = 'مسیر ورکر پاسخ HTTP ' . $statusCode . ' داد؛ منشأ خطا مشخص نیست. کد جدید ورکر را Deploy و دوباره تلاش کنید.';
+                }
+            }
+
 			return new WP_Error(
 				'google_sheets_api_error',
-				'Google Sheets درخواست را نپذیرفت.',
+				$message,
 				[
 					'status' => 502,
 					'google_status' => $statusCode,

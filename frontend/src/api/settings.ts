@@ -11,6 +11,14 @@ import type {
     SheetSettingPayload,
 } from '../types/settings';
 
+const generalSettingsSchema = z.object({
+    success: z.literal(true),
+    data: z.object({
+        searchMetaKey: z.string(),
+        worker: z.object({useWorker: z.boolean(), workerUrl: z.string(), hasWorkerToken: z.boolean()}),
+    }),
+});
+
 export const settingsApi = {
     reorder: (slugs: string[]) => request('/settings/reorder', settingsResponseSchema, {method: 'POST', body: JSON.stringify({slugs})}),
     getAll: () =>
@@ -44,7 +52,7 @@ export const settingsApi = {
             },
         ),
 
-    getHeaders: (credentials: SheetCredentialsForm) =>
+    getHeaders: (credentials: SheetCredentialsForm, slug = '') =>
         request(
             '/settings/headers',
             headersResponseSchema,
@@ -52,6 +60,7 @@ export const settingsApi = {
                 method: 'POST',
                 body: JSON.stringify({
                     credentials,
+                    slug,
                 }),
             },
         ),
@@ -64,25 +73,17 @@ export const settingsApi = {
                 method: 'POST',
             },
         ),
-    getGeneralSettings: () =>
-        request<{ success: boolean; data: { searchMetaKey: string } }>(
-            '/general-settings',
-            z.object({
-                success: z.literal(true),
-                data: z.object({ searchMetaKey: z.string() }),
-            })
-        ),
-
-    updateGeneralSettings: (searchMetaKey: string) =>
-        request<{ success: boolean; data: { searchMetaKey: string } }>(
-            '/general-settings',
-            z.object({
-                success: z.literal(true),
-                data: z.object({ searchMetaKey: z.string() }),
-            }),
-            {
-                method: 'POST',
-                body: JSON.stringify({ searchMetaKey }),
-            }
-        ),
+    getGeneralSettings: () => request('/general-settings', generalSettingsSchema),
+    updateGeneralSettings: (searchMetaKey: string, worker: {useWorker: boolean; workerUrl: string; workerToken: string}) => {
+        const token = worker.workerToken.trim();
+        if (token && (token.length < 32 || token.length > 256 || /[^\x21-\x7E]/.test(token))) {
+            throw new Error('کلید ورکر باید ۳۲ تا ۲۵۶ کاراکتر ASCII قابل چاپ، بدون فاصله یا خط جدید باشد؛ علامت‌های ویژه مجازند.');
+        }
+        return request('/general-settings', generalSettingsSchema, {
+            method: 'POST', body: JSON.stringify({searchMetaKey, worker: {
+                useWorker: worker.useWorker, workerUrl: worker.workerUrl,
+                workerTokenEncoded: btoa(token),
+            }}),
+        });
+    },
 };

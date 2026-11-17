@@ -38,7 +38,11 @@ const request = async <T>(
 
     let payload: unknown;
     try { payload = await response.json(); }
-    catch { throw new Error(`پاسخ سرور معتبر نیست (HTTP ${response.status}). دوباره تلاش کنید.`); }
+    catch {
+        throw new Error(response.status === 400
+            ? 'سرور پاسخ غیر JSON با HTTP 400 برگرداند. احتمال ردشدن درخواست توسط وب‌سرور یا فایروال وجود دارد؛ لاگ سرور باید بررسی شود.'
+            : `پاسخ سرور معتبر نیست (HTTP ${response.status}). دوباره تلاش کنید.`);
+    }
 
     if (!response.ok) {
         throw new Error(

@@ -460,6 +460,7 @@ final class PriceUpdaterController
 			'success' => true,
 			'data'    => [
 				'searchMetaKey' => (string) get_option('input_add_meta_search_excel_updater', ''),
+                'worker' => $this->publicWorkerSettings(),
 			],
 		]);
 	}
@@ -467,7 +468,37 @@ final class PriceUpdaterController
 	public function updateGeneralSettings(WP_REST_Request $request): WP_REST_Response|WP_Error
 	{
 		$params = $request->get_json_params();
-		$metaKey = sanitize_text_field((string) ($params['searchMetaKey'] ?? ''));
+        if (!is_array($params)) {
+            return new WP_Error('invalid_general_settings', 'تنظیمات معتبر نیست.', ['status' => 400]);
+        }
+        $stored = get_option('wordflow_sheets_worker', []);
+        $stored = is_array($stored) ? $stored : [];
+        if (array_key_exists('worker', $params)) {
+            if (!is_array($params['worker'])) {
+                return new WP_Error('invalid_worker_settings', 'تنظیمات ورکر معتبر نیست.', ['status' => 400]);
+            }
+            $input = $params['worker'];
+            if (array_key_exists('workerTokenEncoded', $input)) {
+                if (!is_string($input['workerTokenEncoded']) || strlen($input['workerTokenEncoded']) > 344) {
+                    return new WP_Error('invalid_worker_token_encoding', 'قالب کلید ورکر معتبر نیست.', ['status' => 400]);
+                }
+                $decoded = base64_decode($input['workerTokenEncoded'], true);
+                if ($decoded === false) {
+                    return new WP_Error('invalid_worker_token_encoding', 'قالب کلید ورکر معتبر نیست.', ['status' => 400]);
+                }
+                $input['workerToken'] = $decoded;
+            }
+            $worker = array_merge($stored, $input);
+            if (trim((string) ($worker['workerToken'] ?? '')) === '') {
+                $worker['workerToken'] = (string) ($stored['workerToken'] ?? '');
+            }
+            $validated = GoogleSheetsService::validateConnection($worker);
+            if (is_wp_error($validated)) {
+                return $validated;
+            }
+            update_option('wordflow_sheets_worker', $validated, false);
+        }
+        $metaKey = sanitize_text_field((string) ($params['searchMetaKey'] ?? get_option('input_add_meta_search_excel_updater', '')));
 		
 		update_option('input_add_meta_search_excel_updater', $metaKey);
 		
@@ -475,7 +506,19 @@ final class PriceUpdaterController
 			'success' => true,
 			'data'    => [
 				'searchMetaKey' => $metaKey,
+                'worker' => $this->publicWorkerSettings(),
 			],
 		]);
 	}
+    private function publicWorkerSettings(): array
+    {
+        $stored = get_option('wordflow_sheets_worker', []);
+        $stored = is_array($stored) ? $stored : [];
+        return [
+            'useWorker' => !empty($stored['useWorker']),
+            'workerUrl' => (string) ($stored['workerUrl'] ?? ''),
+            'hasWorkerToken' => !empty($stored['workerToken']),
+        ];
+    }
+
 }

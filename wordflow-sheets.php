@@ -3,7 +3,7 @@
 /**
  * Plugin Name: WordFlow Sheets Updater
  * Description: Synchronize WooCommerce product prices and variations with Google Sheets and Excel data.
- * Version: 1.0.17
+ * Version: 1.0.20
  * Requires at least: 6.6
  * Requires PHP: 8.1
  * Author: WordFlow Team
@@ -20,7 +20,7 @@ defined('ABSPATH') || exit;
 
 final class SheetsExcelUpdater
 {
-	private const VERSION = '1.0.17';
+	private const VERSION = '1.0.20';
 	private const MINIMUM_PHP_VERSION = '8.1';
 	private const MINIMUM_WP_VERSION = '6.6';
 	private const MINIMUM_WC_VERSION = '9.0';

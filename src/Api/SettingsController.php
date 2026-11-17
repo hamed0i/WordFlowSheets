@@ -228,6 +228,10 @@ final class SettingsController
 			);
 		}
 		
+        if (trim((string) ($credentials['apiKey'] ?? '')) === '') {
+            $credentials['apiKey'] = $this->settings->getApiKey((string) ($data['slug'] ?? '')) ?? '';
+        }
+
 		$result = $this->googleSheets->getHeaders(
 			(string) ($credentials['spreadsheetId'] ?? ''),
 			(string) ($credentials['apiKey'] ?? ''),

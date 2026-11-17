@@ -154,12 +154,7 @@ export const SettingsForm = ({
         setLoadingHeaders(true);
 
         try {
-            const response = await settingsApi.getHeaders({
-                spreadsheetId: form.credentials.spreadsheetId,
-                apiKey: form.credentials.apiKey,
-                sheetName: form.credentials.sheetName,
-                range: form.credentials.range,
-            });
+            const response = await settingsApi.getHeaders(form.credentials, form.slug);
 
             setHeaders(response.data);
         } catch (error) {
@@ -376,7 +371,7 @@ export const SettingsForm = ({
                             loadingHeaders ||
                             saving ||
                             !form.credentials.spreadsheetId ||
-                            !form.credentials.apiKey ||
+                            (!form.credentials.apiKey && !setting?.credentials.hasApiKey) ||
                             !form.credentials.sheetName ||
                             !form.credentials.range
                         }
